@@ -193,7 +193,7 @@ type worker struct {
 }
 
 func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, isLocalBlock func(*types.Block) bool, init bool) *worker {
-	fmt.Println("new Worker",chainConfig.RedCoastBlock)
+	fmt.Println("new Worker", chainConfig.RedCoastBlock)
 	worker := &worker{
 		config:             config,
 		chainConfig:        chainConfig,
@@ -941,7 +941,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	posa, isPoSA := w.engine.(consensus.PoSA)
 
 	if isPoSA {
-		fmt.Println("posa handle",w.chainConfig.RedCoastBlock)
+		//fmt.Println("posa handle",w.chainConfig.RedCoastBlock)
 		if err := posa.PreHandle(w.chain, header, env.state); err != nil {
 			log.Error("Failed to apply system contract upgrade", "err", err)
 			return
@@ -993,8 +993,8 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 // and commits new work if consensus engine is running.
 func (w *worker) commit(uncles []*types.Header, interval func(), update bool, start time.Time) error {
 	s := w.current.state
-	fmt.Println("commit",w.current.header.Number)
-	fmt.Println("commit",w.current.header.Extra)
+	//fmt.Println("commit",w.current.header.Number)
+	//fmt.Println("commit",w.current.header.Extra)
 	block, receipts, err := w.engine.FinalizeAndAssemble(w.chain, types.CopyHeader(w.current.header), s, w.current.txs, uncles, w.current.receipts)
 	if err != nil {
 		return err
