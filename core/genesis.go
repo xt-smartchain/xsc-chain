@@ -247,6 +247,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return g.Config
 	case ghash == params.MainnetGenesisHash:
 		return params.MainnetChainConfig
+	case ghash == params.TestnetGenesisHash:
+		return params.TestnetChainConfig
 	//case ghash == params.TestnetGenesisHash:
 	//	return params.TestnetChainConfig
 	default:
@@ -349,16 +351,16 @@ func DefaultGenesisBlock() *Genesis {
 	}
 }
 
-//func DefaultTestnetGenesisBlock() *Genesis {
-//	return &Genesis{
-//		Config:     params.TestnetChainConfig,
-//		Timestamp:  0x5fc58968,
-//		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000006301cdf018e8678067cf8f14ab99f6f2a906db44ba15350a03e67247704925fdec4f4f4ca844f45897205d7a7181d3918b27050c3be5e9dcbb6d21b257ba191a2ca47436e6444b6822f07fbdc613265db5f5493bcde2e1b179db904ed89ec5368e444d500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-//		GasLimit:   0x280de80,
-//		Difficulty: big.NewInt(1),
-//		Alloc:      decodePrealloc(testnetAllocData),
-//	}
-//}
+func DefaultTestnetGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.TestnetChainConfig,
+		Timestamp:  0x5fc58968,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000e9f0b3bd1dc6c7b45cc79e25fc137ad4cc458f6773c20c4b7aae3d19eb66decf4b53e4b4cd1bf57a9da829429c3b4ca01b124f5459aa02e16ede4193ddf0b34dc25afc45d73daaee709837ee3286f032f5c62635a788a9d6259c75a93f1a66d6e44276d90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   0x280de80,
+		Difficulty: big.NewInt(1),
+		Alloc:      decodePrealloc(testnetAllocData),
+	}
+}
 
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block.
 func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {

@@ -27,8 +27,8 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
-
+	MainnetGenesisHash = common.HexToHash("0xba837dc8a7001d26dbc3dc38e795f2a3e04af1559ac6aa3541fe2006e295236e")
+	TestnetGenesisHash = common.HexToHash("0x44c9f5c51403be7954fd5bbdecb749e0c8bc77e4698888f2722160d089801a62")
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of
@@ -49,6 +49,32 @@ var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
 		ChainID:             big.NewInt(172),
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		DAOForkSupport:      true,
+		EIP150Block:         big.NewInt(0),
+		//EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    big.NewInt(0),
+		RamanujanBlock:      big.NewInt(0),
+		NielsBlock:          big.NewInt(0),
+		MirrorSyncBlock:     big.NewInt(0),
+		BerlinBlock:         big.NewInt(0),
+		RedCoastBlock:       big.NewInt(2),
+		//Ethash:              new(EthashConfig),
+		Parlia: &ParliaConfig{
+			Period: 5,
+			Epoch:  200,
+		},
+	}
+
+	TestnetChainConfig = &ChainConfig{
+		ChainID:             big.NewInt(772),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      true,
