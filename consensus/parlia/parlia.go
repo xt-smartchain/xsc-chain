@@ -1397,6 +1397,9 @@ func (p *Parlia) PreHandle(chain consensus.ChainHeaderReader, header *types.Head
 		//fmt.Println("PreHandle")
 		return systemcontract.ApplySystemContractUpgrade(state, header, newChainContext(chain, p), p.chainConfig)
 	}
+	if p.chainConfig.IsBerlin(header.Number) {
+		p.signer = types.NewEIP2930Signer(p.chainConfig.ChainID)
+	}
 	return nil
 }
 
