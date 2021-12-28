@@ -474,7 +474,15 @@ func (s *StateDB) Suicide(addr common.Address) bool {
 //
 // Setting, updating & deleting state object methods.
 //
+func (s *StateDB) Erase(addr common.Address) bool {
+	stateObject := s.getStateObject(addr)
+	if stateObject == nil {
+		return false
+	}
+	stateObject.erase()
 
+	return true
+}
 // updateStateObject writes the given object to the trie.
 func (s *StateDB) updateStateObject(obj *StateObject) {
 	// Track the amount of time wasted on updating the account from the trie

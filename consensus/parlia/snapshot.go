@@ -18,7 +18,7 @@ package parlia
 
 import (
 	"bytes"
-	"encoding/hex"
+	//"encoding/hex"
 	"encoding/json"
 	"errors"
 	"math/big"
@@ -187,44 +187,73 @@ func (s *Snapshot) apply(headers []*types.Header, chain consensus.ChainHeaderRea
 			}
 		}
 		snap.Recents[number] = validator
-		// change validator set
-		if number > 0 && number%s.config.Epoch == uint64(len(snap.Validators)/2) {
-			checkpointHeader := FindAncientHeader(header, uint64(len(snap.Validators)/2), chain, parents)
-			if checkpointHeader == nil {
-				return nil, consensus.ErrUnknownAncestor
+		if number > 0 && number%s.config.Epoch == 0 {
+			checkpointHeader := header
+
+			// get validators from headers and use that for new validator set
+			validators := make([]common.Address, (len(checkpointHeader.Extra)-extraVanity-extraSeal)/common.AddressLength)
+			for i := 0; i < len(validators); i++ {
+				copy(validators[i][:], checkpointHeader.Extra[extraVanity+i*common.AddressLength:])
 			}
 
-			validatorBytes := checkpointHeader.Extra[extraVanity : len(checkpointHeader.Extra)-extraSeal]
-			// get validators from headers and use that for new validator set
-			newValArr, err := ParseValidators(validatorBytes)
-			if err != nil {
-				return nil, err
+			newValidators := make(map[common.Address]struct{})
+			for _, validator := range validators {
+				newValidators[validator] = struct{}{}
 			}
-			newVals := make(map[common.Address]struct{}, len(newValArr))
-			for _, val := range newValArr {
-				newVals[val] = struct{}{}
+
+			// need to delete recorded recent seen blocks if necessary, it may pause whole chain when validators length
+			// decreases.
+			limit := uint64(len(newValidators)/2 + 1)
+			for i := 0; i < len(snap.Validators)/2-len(newValidators)/2; i++ {
+				delete(snap.Recents, number-limit-uint64(i))
 			}
-			oldLimit := len(snap.Validators)/2 + 1
-			newLimit := len(newVals)/2 + 1
-			if newLimit < oldLimit {
-				for i := 0; i < oldLimit-newLimit; i++ {
-					delete(snap.Recents, number-uint64(newLimit)-uint64(i))
-				}
-			}
-			oldLimit = len(snap.Validators)
-			newLimit = len(newVals)
-			if newLimit < oldLimit {
-				for i := 0; i < oldLimit-newLimit; i++ {
-					delete(snap.RecentForkHashes, number-uint64(newLimit)-uint64(i))
-				}
-			}
-			snap.Validators = newVals
+
+			snap.Validators = newValidators
 		}
-		snap.RecentForkHashes[number] = hex.EncodeToString(header.Extra[extraVanity-nextForkHashSize : extraVanity])
 	}
+
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
+
 	return snap, nil
+		// change validator set
+//		if number > 0 && number%s.config.Epoch == uint64(len(snap.Validators)/2) {
+//			checkpointHeader := FindAncientHeader(header, uint64(len(snap.Validators)/2), chain, parents)
+//			if checkpointHeader == nil {
+//				return nil, consensus.ErrUnknownAncestor
+//			}
+
+//			validatorBytes := checkpointHeader.Extra[extraVanity : len(checkpointHeader.Extra)-extraSeal]
+			// get validators from headers and use that for new validator set
+//			newValArr, err := ParseValidators(validatorBytes)
+//			if err != nil {
+//				return nil, err
+//			}
+//			newVals := make(map[common.Address]struct{}, len(newValArr))
+//			for _, val := range newValArr {
+//				newVals[val] = struct{}{}
+//			}
+//			oldLimit := len(snap.Validators)/2 + 1
+//			newLimit := len(newVals)/2 + 1
+//			if newLimit < oldLimit {
+//				for i := 0; i < oldLimit-newLimit; i++ {
+//					delete(snap.Recents, number-uint64(newLimit)-uint64(i))
+//				}
+//			}
+//			oldLimit = len(snap.Validators)
+//			newLimit = len(newVals)
+//			if newLimit < oldLimit {
+//				for i := 0; i < oldLimit-newLimit; i++ {
+//					delete(snap.RecentForkHashes, number-uint64(newLimit)-uint64(i))
+//				}
+//			}
+//			snap.Validators = newVals
+//		}
+//		snap.RecentForkHashes[number] = hex.EncodeToString(header.Extra[extraVanity-nextForkHashSize : extraVanity])
+//	}
+//	snap.Number += uint64(len(headers))
+//	snap.Hash = headers[len(headers)-1].Hash()
+//	return snap, nil
 }
 
 // validators retrieves the list of validators in ascending order.

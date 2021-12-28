@@ -220,8 +220,11 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
 	// The full node of two BSC testnets may run without genesis file after been inited.
-	if genesis == nil && stored != params.MainnetGenesisHash &&
-		stored != params.ChapelGenesisHash && stored != params.RialtoGenesisHash && stored != params.BSCGenesisHash {
+	//if genesis == nil && stored != params.MainnetGenesisHash &&
+	//	stored != params.ChapelGenesisHash && stored != params.RialtoGenesisHash && stored != params.BSCGenesisHash {
+	//	return storedcfg, stored, nil
+	//}
+	if genesis == nil && stored != params.MainnetGenesisHash {
 		return storedcfg, stored, nil
 	}
 	// Check config compatibility and write the config. Compatibility errors
@@ -244,20 +247,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return g.Config
 	case ghash == params.MainnetGenesisHash:
 		return params.MainnetChainConfig
-	case ghash == params.RopstenGenesisHash:
-		return params.RopstenChainConfig
-	case ghash == params.RinkebyGenesisHash:
-		return params.RinkebyChainConfig
-	case ghash == params.GoerliGenesisHash:
-		return params.GoerliChainConfig
-	case ghash == params.BSCGenesisHash:
-		return params.BSCChainConfig
-	case ghash == params.ChapelGenesisHash:
-		return params.ChapelChainConfig
-	case ghash == params.RialtoGenesisHash:
-		return params.RialtoChainConfig
-	case ghash == params.YoloV3GenesisHash:
-		return params.YoloV3ChainConfig
+	//case ghash == params.TestnetGenesisHash:
+	//	return params.TestnetChainConfig
 	default:
 		return params.AllEthashProtocolChanges
 	}
@@ -349,61 +340,25 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
-		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
-		Difficulty: big.NewInt(17179869184),
+		Nonce:      0,
+		Timestamp:  0x5fc58968,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000e9f0b3bd1dc6c7b45cc79e25fc137ad4cc458f6773c20c4b7aae3d19eb66decf4b53e4b4cd1bf57a9da829429c3b4ca01b124f5459aa02e16ede4193ddf0b34dc25afc45d73daaee709837ee3286f032f5c62635a788a9d6259c75a93f1a66d6e44276d9933aa063de069f9d89645bb2d2c9ace8d16721c9cc9233a2623a013dd60bc359f0f2ccfba9dcabdfd5df8dc662cd9fc7e0997f0d54bb25a985b6a1e6d516b9f900f2f9c1dd5b87de428f26ded294dba8b3d2266e93bc54f4da60d5eed6391ecb9b397d60d839a44d84dd864b51b5410c682ba53ec267233f9f605383343a115410cbef52fc1f9655d60f974e67dd96fb4cd585d32f13ee82c2b3c1ba36c00870e70d97fadedb87809d404db31755769877e5c7673c59430264f94202db98a73f0a8f123579672b81ca78ed6af010d2346521074730376553e0ed2f99c3e2a47c01cc19e2dac4a395220121484dcd44a5fdbbd2bdf4aa8d1bb36ec483ae8ee356407805c3187b32822fb7389cd1fed73ebd1de6df6323701a9aeaaabc0a72f5e0e5bcc1771dd33e8369808e732ffca383d31ef8ec3fef094262a97a3608fe0e990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   0x280de80,
+		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(mainnetAllocData),
 	}
 }
 
-// DefaultRopstenGenesisBlock returns the Ropsten network genesis block.
-func DefaultRopstenGenesisBlock() *Genesis {
-	return &Genesis{
-		Config:     params.RopstenChainConfig,
-		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
-		GasLimit:   16777216,
-		Difficulty: big.NewInt(1048576),
-		Alloc:      decodePrealloc(ropstenAllocData),
-	}
-}
-
-// DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
-func DefaultRinkebyGenesisBlock() *Genesis {
-	return &Genesis{
-		Config:     params.RinkebyChainConfig,
-		Timestamp:  1492009146,
-		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   4700000,
-		Difficulty: big.NewInt(1),
-		Alloc:      decodePrealloc(rinkebyAllocData),
-	}
-}
-
-// DefaultGoerliGenesisBlock returns the Görli network genesis block.
-func DefaultGoerliGenesisBlock() *Genesis {
-	return &Genesis{
-		Config:     params.GoerliChainConfig,
-		Timestamp:  1548854791,
-		ExtraData:  hexutil.MustDecode("0x22466c6578692069732061207468696e6722202d204166726900000000000000e0a2bd4258d2768837baa26a28fe71dc079f84c70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   10485760,
-		Difficulty: big.NewInt(1),
-		Alloc:      decodePrealloc(goerliAllocData),
-	}
-}
-
-func DefaultYoloV3GenesisBlock() *Genesis {
-	// Full genesis: https://gist.github.com/holiman/c6ed9269dce28304ad176314caa75e97
-	return &Genesis{
-		Config:     params.YoloV3ChainConfig,
-		Timestamp:  0x6027dd2e,
-		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000001041afbcb359d5a8dc58c15b2ff51354ff8a217d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   0x47b760,
-		Difficulty: big.NewInt(1),
-		Alloc:      decodePrealloc(yoloV3AllocData),
-	}
-}
+//func DefaultTestnetGenesisBlock() *Genesis {
+//	return &Genesis{
+//		Config:     params.TestnetChainConfig,
+//		Timestamp:  0x5fc58968,
+//		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000006301cdf018e8678067cf8f14ab99f6f2a906db44ba15350a03e67247704925fdec4f4f4ca844f45897205d7a7181d3918b27050c3be5e9dcbb6d21b257ba191a2ca47436e6444b6822f07fbdc613265db5f5493bcde2e1b179db904ed89ec5368e444d500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+//		GasLimit:   0x280de80,
+//		Difficulty: big.NewInt(1),
+//		Alloc:      decodePrealloc(testnetAllocData),
+//	}
+//}
 
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block.
 func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
@@ -433,13 +388,14 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 }
 
 func decodePrealloc(data string) GenesisAlloc {
-	var p []struct{ Addr, Balance *big.Int }
+	var p []struct{ Addr, Balance *big.Int
+	Code    []byte }
 	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {
 		panic(err)
 	}
 	ga := make(GenesisAlloc, len(p))
 	for _, account := range p {
-		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
+		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance, Code: account.Code}
 	}
 	return ga
 }

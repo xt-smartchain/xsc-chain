@@ -64,6 +64,7 @@ func NewEVMTxContext(msg Message) vm.TxContext {
 	}
 }
 
+
 // GetHashFn returns a GetHashFunc which retrieves header hashes by number
 func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash {
 	// Cache will initially contain [refHash.parent],
@@ -109,3 +110,20 @@ func Transfer(db vm.StateDB, sender, recipient common.Address, amount *big.Int) 
 	db.SubBalance(sender, amount)
 	db.AddBalance(recipient, amount)
 }
+//
+//func GetCanCreateFn(chain ChainContext) vm.CanCreateFunc {
+//	if chain.Engine() == nil {
+//		return func(db vm.StateDB, address common.Address, height *big.Int) bool {
+//			return true
+//		}
+//	}
+//	posa, isPoSA := chain.Engine().(consensus.PoSA)
+//	if isPoSA {
+//		return func(db vm.StateDB, address common.Address, height *big.Int) bool {
+//			return posa.CanCreate(db, address, height)
+//		}
+//	}
+//	return func(db vm.StateDB, address common.Address, height *big.Int) bool {
+//		return true
+//	}
+//}

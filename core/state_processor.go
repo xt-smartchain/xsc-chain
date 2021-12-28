@@ -21,9 +21,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
+	//"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/systemcontracts"
+	//"github.com/ethereum/go-ethereum/core/systemcontracts"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -58,24 +58,30 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // transactions failed to execute due to insufficient gas it will return an error.
 func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
 	var (
+		receipts = make([]*types.Receipt, 0)
 		usedGas = new(uint64)
 		header  = block.Header()
 		allLogs []*types.Log
 		gp      = new(GasPool).AddGas(block.GasLimit())
 	)
-	var receipts = make([]*types.Receipt, 0)
+	//var receipts = make([]*types.Receipt, 0)
 	// Mutate the block and state according to any hard-fork specs
-	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
-		misc.ApplyDAOHardFork(statedb)
-	}
+//	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
+	//	misc.ApplyDAOHardFork(statedb)
+//	}
 	// Handle upgrade build-in system contract code
-	systemcontracts.UpgradeBuildInSystemContract(p.config, block.Number(), statedb)
+	//systemcontracts.UpgradeBuildInSystemContract(p.config, block.Number(), statedb)
 
 	blockContext := NewEVMBlockContext(header, p.bc, nil)
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 
 	// Iterate over and process the individual transactions
 	posa, isPoSA := p.engine.(consensus.PoSA)
+	if isPoSA {
+		if err := posa.PreHandle(p.bc, header, statedb); err != nil {
+			return nil, nil, 0, err
+		}
+	}
 	commonTxs := make([]*types.Transaction, 0, len(block.Transactions()))
 	// usually do have two tx, one for validator set contract, another for system reward contract.
 	systemTxs := make([]*types.Transaction, 0, 2)
@@ -88,12 +94,15 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 				systemTxs = append(systemTxs, tx)
 				continue
 			}
+			err := posa.ValidateTx(tx, header, statedb)
+		
+			if err != nil {
+				return nil, nil, 0, err
+			}
 		}
 
 		msg, err := tx.AsMessage(signer)
-		if err != nil {
-			return nil, nil, 0, err
-		}
+		
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, err := applyTransaction(msg, p.config, p.bc, nil, gp, statedb, header, tx, usedGas, vmenv)
 		if err != nil {

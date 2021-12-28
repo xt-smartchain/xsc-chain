@@ -1657,29 +1657,29 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		}
 		cfg.Genesis = core.DefaultGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.MainnetGenesisHash)
-	case ctx.GlobalBool(RopstenFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
-		}
-		cfg.Genesis = core.DefaultRopstenGenesisBlock()
-		SetDNSDiscoveryDefaults(cfg, params.RopstenGenesisHash)
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 4
-		}
-		cfg.Genesis = core.DefaultRinkebyGenesisBlock()
-		SetDNSDiscoveryDefaults(cfg, params.RinkebyGenesisHash)
-	case ctx.GlobalBool(GoerliFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 5
-		}
-		cfg.Genesis = core.DefaultGoerliGenesisBlock()
-		SetDNSDiscoveryDefaults(cfg, params.GoerliGenesisHash)
-	case ctx.GlobalBool(YoloV3Flag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = new(big.Int).SetBytes([]byte("yolov3x")).Uint64() // "yolov3x"
-		}
-		cfg.Genesis = core.DefaultYoloV3GenesisBlock()
+	//case ctx.GlobalBool(RopstenFlag.Name):
+	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+	//		cfg.NetworkId = 3
+	//	}
+	//	cfg.Genesis = core.DefaultRopstenGenesisBlock()
+	//	SetDNSDiscoveryDefaults(cfg, params.RopstenGenesisHash)
+	//case ctx.GlobalBool(RinkebyFlag.Name):
+	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+	//		cfg.NetworkId = 4
+	//	}
+	//	cfg.Genesis = core.DefaultRinkebyGenesisBlock()
+	//	SetDNSDiscoveryDefaults(cfg, params.RinkebyGenesisHash)
+	//case ctx.GlobalBool(GoerliFlag.Name):
+	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+	//		cfg.NetworkId = 5
+	//	}
+	//	cfg.Genesis = core.DefaultGoerliGenesisBlock()
+	//	SetDNSDiscoveryDefaults(cfg, params.GoerliGenesisHash)
+	//case ctx.GlobalBool(YoloV3Flag.Name):
+	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+	//		cfg.NetworkId = new(big.Int).SetBytes([]byte("yolov3x")).Uint64() // "yolov3x"
+	//	}
+	//	cfg.Genesis = core.DefaultYoloV3GenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 1337
@@ -1862,14 +1862,14 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	switch {
 	case ctx.GlobalBool(MainnetFlag.Name):
 		genesis = core.DefaultGenesisBlock()
-	case ctx.GlobalBool(RopstenFlag.Name):
-		genesis = core.DefaultRopstenGenesisBlock()
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		genesis = core.DefaultRinkebyGenesisBlock()
-	case ctx.GlobalBool(GoerliFlag.Name):
-		genesis = core.DefaultGoerliGenesisBlock()
-	case ctx.GlobalBool(YoloV3Flag.Name):
-		genesis = core.DefaultYoloV3GenesisBlock()
+	//case ctx.GlobalBool(RopstenFlag.Name):
+	//	genesis = core.DefaultRopstenGenesisBlock()
+	//case ctx.GlobalBool(RinkebyFlag.Name):
+	//	genesis = core.DefaultRinkebyGenesisBlock()
+	//case ctx.GlobalBool(GoerliFlag.Name):
+	//	genesis = core.DefaultGoerliGenesisBlock()
+	//case ctx.GlobalBool(YoloV3Flag.Name):
+	//	genesis = core.DefaultYoloV3GenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		Fatalf("Developer chains are ephemeral")
 	}

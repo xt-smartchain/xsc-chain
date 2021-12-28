@@ -69,6 +69,18 @@ func (s *PublicEthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) 
 	price, err := s.b.SuggestPrice(ctx)
 	return (*hexutil.Big)(price), err
 }
+// GasPricePrediction returns a suggestion for gas prices of fast, median, low.
+//func (s *PublicEthereumAPI) GasPricePrediction(ctx context.Context) (map[string]uint, error) {
+//	price, err := s.b.PricePrediction(ctx)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return map[string]uint{
+//		"fast":   price[0],
+//		"median": price[1],
+//		"low":    price[2],
+//	}, nil
+//}
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
 // yet received the latest block headers from its pears. In case it is synchronizing:
@@ -92,6 +104,9 @@ func (s *PublicEthereumAPI) Syncing() (interface{}, error) {
 		"pulledStates":  hexutil.Uint64(progress.PulledStates),
 		"knownStates":   hexutil.Uint64(progress.KnownStates),
 	}, nil
+}
+func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
+	return hexutil.Uint(s.b.ProtocolVersion())
 }
 
 // PublicTxPoolAPI offers and API for the transaction pool. It only operates on data that is non confidential.

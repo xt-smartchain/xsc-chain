@@ -17,8 +17,8 @@
 package miner
 
 import (
-	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -27,11 +27,9 @@ import (
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/consensus/parlia"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/systemcontracts"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -195,6 +193,7 @@ type worker struct {
 }
 
 func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, isLocalBlock func(*types.Block) bool, init bool) *worker {
+	fmt.Println("new Worker",chainConfig.RedCoastBlock)
 	worker := &worker{
 		config:             config,
 		chainConfig:        chainConfig,
@@ -914,19 +913,19 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
-	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
-	if daoBlock := w.chainConfig.DAOForkBlock; daoBlock != nil {
-		// Check whether the block is among the fork extra-override range
-		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
-		if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
-			// Depending whether we support or oppose the fork, override differently
-			if w.chainConfig.DAOForkSupport {
-				header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
-			} else if bytes.Equal(header.Extra, params.DAOForkBlockExtra) {
-				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
-			}
-		}
-	}
+	//If we are care about TheDAO hard-fork check whether to override the extra-data or not
+	//if daoBlock := w.chainConfig.DAOForkBlock; daoBlock != nil {
+	//	// Check whether the block is among the fork extra-override range
+	//	limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
+	//	if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
+	//		// Depending whether we support or oppose the fork, override differently
+	//		if w.chainConfig.DAOForkSupport {
+	//			header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
+	//		} else if bytes.Equal(header.Extra, params.DAOForkBlockExtra) {
+	//			header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
+	//		}
+	//	}
+	//}
 	// Could potentially happen if starting to mine in an odd state.
 	err := w.makeCurrent(parent, header)
 	if err != nil {
@@ -935,10 +934,19 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 	// Create the current work task and check any fork transitions needed
 	env := w.current
-	if w.chainConfig.DAOForkSupport && w.chainConfig.DAOForkBlock != nil && w.chainConfig.DAOForkBlock.Cmp(header.Number) == 0 {
-		misc.ApplyDAOHardFork(env.state)
+	//if w.chainConfig.DAOForkSupport && w.chainConfig.DAOForkBlock != nil && w.chainConfig.DAOForkBlock.Cmp(header.Number) == 0 {
+	//	misc.ApplyDAOHardFork(env.state)
+	//}
+	//systemcontracts.UpgradeBuildInSystemContract(w.chainConfig, header.Number, env.state)
+	posa, isPoSA := w.engine.(consensus.PoSA)
+
+	if isPoSA {
+		fmt.Println("posa handle",w.chainConfig.RedCoastBlock)
+		if err := posa.PreHandle(w.chain, header, env.state); err != nil {
+			log.Error("Failed to apply system contract upgrade", "err", err)
+			return
+		}
 	}
-	systemcontracts.UpgradeBuildInSystemContract(w.chainConfig, header.Number, env.state)
 	// Accumulate the uncles for the current block
 	uncles := make([]*types.Header, 0)
 	// Create an empty block based on temporary copied state for
@@ -985,6 +993,8 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 // and commits new work if consensus engine is running.
 func (w *worker) commit(uncles []*types.Header, interval func(), update bool, start time.Time) error {
 	s := w.current.state
+	fmt.Println("commit",w.current.header.Number)
+	fmt.Println("commit",w.current.header.Extra)
 	block, receipts, err := w.engine.FinalizeAndAssemble(w.chain, types.CopyHeader(w.current.header), s, w.current.txs, uncles, w.current.receipts)
 	if err != nil {
 		return err

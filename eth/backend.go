@@ -214,6 +214,13 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 	eth.txPool = core.NewTxPool(config.TxPool, chainConfig, eth.blockchain)
 
+	if parliaEngine, ok := eth.engine.(*parlia.Parlia); ok {
+		// set state fn
+		parliaEngine.SetStateFn(eth.blockchain.StateAt)
+		// set consensus-related transaction validator
+
+	}
+
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieCleanLimit + cacheConfig.TrieDirtyLimit + cacheConfig.SnapshotLimit
 	checkpoint := config.Checkpoint
@@ -526,6 +533,7 @@ func (s *Ethereum) Engine() consensus.Engine           { return s.engine }
 func (s *Ethereum) ChainDb() ethdb.Database            { return s.chainDb }
 func (s *Ethereum) IsListening() bool                  { return true } // Always listening
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.handler.downloader }
+func (s *Ethereum) EthVersion() int                    { return int(eth.ProtocolVersions[0]) }
 func (s *Ethereum) Synced() bool                       { return atomic.LoadUint32(&s.handler.acceptTxs) == 1 }
 func (s *Ethereum) ArchiveMode() bool                  { return s.config.NoPruning }
 func (s *Ethereum) BloomIndexer() *core.ChainIndexer   { return s.bloomIndexer }

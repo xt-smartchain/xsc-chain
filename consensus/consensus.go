@@ -136,9 +136,24 @@ type PoW interface {
 
 type PoSA interface {
 	Engine
+	//heco
+	// PreHandle runs any pre-transaction state modifications (e.g. apply hard fork rules).
+	//
+	// Note: The block header and state database might be updated to reflect any
+	// consensus rules that happen at pre-handling.
+	PreHandle(chain ChainHeaderReader, header *types.Header, state *state.StateDB) error
+	// CanCreate determines where a given address can create a new contract.
+	CanCreate(state StateReader, addr common.Address, height *big.Int) bool
 
+	// ValidateTx do a consensus-related validation on the given transaction at the given header and state.
+	ValidateTx(tx *types.Transaction, header *types.Header, parentState *state.StateDB) error
+	//bsc
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) (bool, error)
 	IsSystemContract(to *common.Address) bool
 	EnoughDistance(chain ChainReader, header *types.Header) bool
 	IsLocalBlock(header *types.Header) bool
+}
+
+type StateReader interface {
+	GetState(addr common.Address, hash common.Hash) common.Hash
 }

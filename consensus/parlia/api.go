@@ -17,13 +17,16 @@
 package parlia
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-// API is a user facing RPC API to allow query snapshot and validators
+// API is a user facing RPC API to allow controlling the validator and voting
+// mechanisms of the proof-of-authority scheme.
 type API struct {
 	chain  consensus.ChainHeaderReader
 	parlia *Parlia
@@ -74,7 +77,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	return snap.validators(), nil
 }
 
-// GetValidatorsAtHash retrieves the list of validators at the specified block.
+// GetValidatorsAtHash retrieves the list of authorized validators at the specified block.
 func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
@@ -85,4 +88,60 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 		return nil, err
 	}
 	return snap.validators(), nil
+}
+
+type status struct {
+	InturnPercent float64                `json:"inturnPercent"`
+	SigningStatus map[common.Address]int `json:"sealerActivity"`
+	NumBlocks     uint64                 `json:"numBlocks"`
+}
+
+// Status returns the status of the last N blocks,
+// - the number of active validators,
+// - the number of validators,
+// - the percentage of in-turn blocks
+func (api *API) Status() (*status, error) {
+	var (
+		numBlocks = uint64(64)
+		header    = api.chain.CurrentHeader()
+		diff      = uint64(0)
+		optimals  = 0
+	)
+	snap, err := api.parlia.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	if err != nil {
+		return nil, err
+	}
+	var (
+		validators = snap.validators()
+		end        = header.Number.Uint64()
+		start      = end - numBlocks
+	)
+	if numBlocks > end {
+		start = 1
+		numBlocks = end - start
+	}
+	signStatus := make(map[common.Address]int)
+	for _, s := range validators {
+		signStatus[s] = 0
+	}
+	for n := start; n < end; n++ {
+		h := api.chain.GetHeaderByNumber(n)
+		if h == nil {
+			return nil, fmt.Errorf("missing block %d", n)
+		}
+		if h.Difficulty.Cmp(diffInTurn) == 0 {
+			optimals++
+		}
+		diff += h.Difficulty.Uint64()
+		sealer, err := api.parlia.Author(h)
+		if err != nil {
+			return nil, err
+		}
+		signStatus[sealer]++
+	}
+	return &status{
+		InturnPercent: float64(100*optimals) / float64(numBlocks),
+		SigningStatus: signStatus,
+		NumBlocks:     numBlocks,
+	}, nil
 }
