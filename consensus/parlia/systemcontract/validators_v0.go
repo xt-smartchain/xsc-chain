@@ -3,7 +3,6 @@ package systemcontract
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/parlia/vmcaller"
@@ -37,13 +36,13 @@ func (v *ValidatorV0) GetTopValidators(statedb *state.StateDB, header *types.Hea
 		return []common.Address{}, err
 	}
 
-	msg := types.NewMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil,false)
-	fmt.Println(msg)
+	msg := types.NewMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
+	//fmt.Println(msg)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
 		return []common.Address{}, err
 	}
-	fmt.Println("result",result)
+	//fmt.Println("result",result)
 	// unpack data
 	ret, err := v.abi.Unpack(method, result)
 	if err != nil {
@@ -69,7 +68,7 @@ func (v *ValidatorV0) GetValidatorFeeAddr(val common.Address, statedb *state.Sta
 		log.Error("Can't pack data for GetValidatorInfo", "error", err)
 		return common.Address{}, err
 	}
-	msg := types.NewMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil,false)
+	msg := types.NewMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
 
 	// use parent
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)

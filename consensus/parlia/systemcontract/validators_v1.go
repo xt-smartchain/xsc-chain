@@ -1,7 +1,6 @@
 package systemcontract
 
 import (
-	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/parlia/vmcaller"
 	"github.com/ethereum/go-ethereum/core"
@@ -67,16 +66,16 @@ func (s *hardForkValidatorsV1) Execute(state *state.StateDB, header *types.Heade
 
 	// initialize v1 contract
 	method := "initialize"
-	fmt.Println(topVals,managers)
+	//fmt.Println(topVals,managers)
 
 	data, err := GetInteractiveABI()[ValidatorsV1ContractName].Pack(method, topVals, managers, s.getAdminByChainId(config.ChainID))
-	fmt.Println(data)
+	//fmt.Println(data)
 	if err != nil {
 		log.Error("Can't pack data for initialize", "error", err)
 		return err
 	}
 
-	msg := types.NewMessage(header.Coinbase, &ValidatorsV1ContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil,false)
+	msg := types.NewMessage(header.Coinbase, &ValidatorsV1ContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
 	_, err = vmcaller.ExecuteMsg(msg, state, header, chainContext, config)
 
 	return
