@@ -27,8 +27,8 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xba837dc8a7001d26dbc3dc38e795f2a3e04af1559ac6aa3541fe2006e295236e")
-	TestnetGenesisHash = common.HexToHash("0x00ddd8230d6e2fbc257d9c10d87b5312e7a34c13165d2b2170fbdbcbdff8b0bc")
+	MainnetGenesisHash = common.HexToHash(MainNetGenesisHashHex)
+	TestnetGenesisHash = common.HexToHash(TestNetGenesisHashHex)
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of
@@ -48,11 +48,11 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(172),
-		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(0),
+		ChainID:        big.NewInt(MainNetChainId),
+		HomesteadBlock: big.NewInt(0),
+		DAOForkBlock:   big.NewInt(0),
+		DAOForkSupport: true,
+		EIP150Block:    big.NewInt(0),
 		//EIP150Hash:        common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
@@ -68,17 +68,17 @@ var (
 		RedCoastBlock:       big.NewInt(2),
 		//Ethash:              new(EthashConfig),
 		Parlia: &ParliaConfig{
-			Period: 5,
-			Epoch:  200,
+			Period: MainNetPeriod,
+			Epoch:  MainNetEpoch,
 		},
 	}
 
 	TestnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(772),
-		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(0),
+		ChainID:        big.NewInt(TestNetChainId),
+		HomesteadBlock: big.NewInt(0),
+		DAOForkBlock:   big.NewInt(0),
+		DAOForkSupport: true,
+		EIP150Block:    big.NewInt(0),
 		//EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
@@ -94,8 +94,8 @@ var (
 		RedCoastBlock:       big.NewInt(2),
 		//Ethash:              new(EthashConfig),
 		Parlia: &ParliaConfig{
-			Period: 5,
-			Epoch:  200,
+			Period: TestNetPeriod,
+			Epoch:  TestNetEpoch,
 		},
 	}
 

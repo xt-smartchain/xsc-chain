@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	devAdmin        = common.HexToAddress("0xce930537a2148b8dc43899ff2e9bcbee0e801c54")
-	devAdminTestnet = common.HexToAddress("0xce930537a2148b8dc43899ff2e9bcbee0e801c54")
+	devAdmin        = common.HexToAddress(params.MainNetDevAdmin)
+	devAdminTestnet = common.HexToAddress(params.TestNetDevAdmin)
 )
 
 const (
@@ -55,8 +55,8 @@ func (s *hardForkAddressList) Execute(state *state.StateDB, header *types.Header
 		return err
 	}
 
-	msg := types.NewMessage(header.Coinbase, &AddressListContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil,false)
-	vmcaller.ExecuteMsg(msg,state,header,chainContext,config)
+	msg := types.NewMessage(header.Coinbase, &AddressListContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
+	vmcaller.ExecuteMsg(msg, state, header, chainContext, config)
 	//context := core.NewEVMContext(msg, header, chainContext, nil)
 	//evm := vm.NewEVM(context, state, config, vm.Config{})
 	//
