@@ -72,11 +72,12 @@ func (n *proofList) Delete(key []byte) error {
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db           Database
-	prefetcher   *triePrefetcher
-	originalRoot common.Hash // The pre-state root, before any changes were made
-	trie         Trie
-	hasher       crypto.KeccakState
+	db             Database
+	prefetcherLock sync.Mutex
+	prefetcher     *triePrefetcher
+	originalRoot   common.Hash // The pre-state root, before any changes were made
+	trie           Trie
+	hasher         crypto.KeccakState
 
 	snapMux       sync.Mutex
 	snaps         *snapshot.Tree
@@ -168,6 +169,8 @@ func newStateDB(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, 
 // state trie concurrently while the state is mutated so that when we reach the
 // commit phase, most of the needed data is already hot.
 func (s *StateDB) StartPrefetcher(namespace string) {
+	s.prefetcherLock.Lock()
+	defer s.prefetcherLock.Unlock()
 	if s.prefetcher != nil {
 		s.prefetcher.close()
 		s.prefetcher = nil
@@ -180,10 +183,12 @@ func (s *StateDB) StartPrefetcher(namespace string) {
 // StopPrefetcher terminates a running prefetcher and reports any leftover stats
 // from the gathered metrics.
 func (s *StateDB) StopPrefetcher() {
+	s.prefetcherLock.Lock()
 	if s.prefetcher != nil {
 		s.prefetcher.close()
 		s.prefetcher = nil
 	}
+	s.prefetcherLock.Unlock()
 }
 
 // setError remembers the first non-nil error it is called with.
@@ -471,9 +476,7 @@ func (s *StateDB) Suicide(addr common.Address) bool {
 	return true
 }
 
-//
 // Setting, updating & deleting state object methods.
-//
 func (s *StateDB) Erase(addr common.Address) bool {
 	stateObject := s.getStateObject(addr)
 	if stateObject == nil {
@@ -483,6 +486,7 @@ func (s *StateDB) Erase(addr common.Address) bool {
 
 	return true
 }
+
 // updateStateObject writes the given object to the trie.
 func (s *StateDB) updateStateObject(obj *StateObject) {
 	// Track the amount of time wasted on updating the account from the trie
@@ -716,8 +720,8 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *StateObject) 
 // CreateAccount is called during the EVM CREATE operation. The situation might arise that
 // a contract does the following:
 //
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
+//  1. sends funds to sha(account ++ (nonce + 1))
+//  2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (s *StateDB) CreateAccount(addr common.Address) {
@@ -951,12 +955,15 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	// the remainder without, but pre-byzantium even the initial prefetcher is
 	// useless, so no sleep lost.
 	prefetcher := s.prefetcher
-	if s.prefetcher != nil {
-		defer func() {
+	defer func() {
+		s.prefetcherLock.Lock()
+		if s.prefetcher != nil {
 			s.prefetcher.close()
 			s.prefetcher = nil
-		}()
-	}
+		}
+		// try not use defer inside defer
+		s.prefetcherLock.Unlock()
+	}()
 
 	tasks := make(chan func())
 	finishCh := make(chan struct{})
