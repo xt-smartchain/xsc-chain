@@ -407,20 +407,21 @@ func TestImportRace(t *testing.T) {
 	}
 	dir2, ks2 := tmpKeyStore(t, true)
 	defer os.RemoveAll(dir2)
-	var atom uint32
+	var atom atomic.Uint32
 	var wg sync.WaitGroup
 	wg.Add(2)
 	for i := 0; i < 2; i++ {
 		go func() {
 			defer wg.Done()
 			if _, err := ks2.Import(json, "new", "new"); err != nil {
-				atomic.AddUint32(&atom, 1)
+				atom.Add(1)
+				//atomic.AddUint32(&atom, 1)
 			}
 
 		}()
 	}
 	wg.Wait()
-	if atom != 1 {
+	if atom.Load() != 1 {
 		t.Errorf("Import is racy")
 	}
 }
