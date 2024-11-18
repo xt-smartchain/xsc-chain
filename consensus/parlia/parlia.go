@@ -160,8 +160,9 @@ var (
 	errBlockHashInconsistent = errors.New("the block hash is inconsistent")
 
 	// errUnauthorizedValidator is returned if a header is signed by a non-authorized entity.
-	errUnauthorizedValidator = errors.New("unauthorized validator")
-
+	errUnauthorizedValidator = func(val string) error {
+		return errors.New("unauthorized validator: " + val)
+	}
 	// errCoinBaseMisMatch is returned if a header's coinbase do not match with signature
 	errCoinBaseMisMatch = errors.New("coinbase do not match with signature")
 
@@ -621,7 +622,7 @@ func (p *Parlia) verifySeal(chain consensus.ChainHeaderReader, header *types.Hea
 	}
 
 	if _, ok := snap.Validators[signer]; !ok {
-		return errUnauthorizedValidator
+		return errUnauthorizedValidator(signer.String())
 	}
 
 	for seen, recent := range snap.Recents {
@@ -1263,7 +1264,7 @@ func (p *Parlia) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 
 	// Bail out if we're unauthorized to sign a block
 	if _, authorized := snap.Validators[val]; !authorized {
-		return errUnauthorizedValidator
+		return errUnauthorizedValidator(val.String())
 	}
 
 	// If we're amongst the recent signers, wait for the next block
@@ -1335,7 +1336,7 @@ func (p *Parlia) SignRecently(chain consensus.ChainReader, parent *types.Header)
 
 	// Bail out if we're unauthorized to sign a block
 	if _, authorized := snap.Validators[p.val]; !authorized {
-		return true, errUnauthorizedValidator
+		return true, errUnauthorizedValidator(p.val.String())
 	}
 
 	// If we're amongst the recent signers, wait for the next block
@@ -1537,11 +1538,12 @@ func (p *Parlia) getBlacklist(header *types.Header, parentState *state.StateDB) 
 }
 
 // Since the state variables are as follow:
-//    bool public initialized;
-//    bool public enabled;
-//    address public admin;
-//    address public pendingAdmin;
-//    mapping(address => bool) private devs;
+//
+//	bool public initialized;
+//	bool public enabled;
+//	address public admin;
+//	address public pendingAdmin;
+//	mapping(address => bool) private devs;
 //
 // according to [Layout of State Variables in Storage](https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html),
 // and after optimizer enabled, the `initialized`, `enabled` and `admin` will be packed, and stores at slot 0,
