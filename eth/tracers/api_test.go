@@ -493,12 +493,14 @@ func TestTraceBlock(t *testing.T) {
 	}}
 	genBlocks := 10
 	signer := types.HomesteadSigner{}
+	var txHash common.Hash
 	api := NewAPI(newTestBackend(t, genBlocks, genesis, func(i int, b *core.BlockGen) {
 		// Transfer from account[0] to account[1]
 		//    value: 1000 wei
 		//    fee:   0 wei
 		tx, _ := types.SignTx(types.NewTransaction(uint64(i), accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[0].key)
 		b.AddTx(tx)
+		txHash = tx.Hash()
 	}))
 
 	var testSuite = []struct {
@@ -521,6 +523,7 @@ func TestTraceBlock(t *testing.T) {
 			expectErr:   nil,
 			expect: []*txTraceResult{
 				{
+					TxHash: txHash,
 					Result: &ethapi.ExecutionResult{
 						Gas:         params.TxGas,
 						Failed:      false,
@@ -544,6 +547,7 @@ func TestTraceBlock(t *testing.T) {
 			expectErr:   nil,
 			expect: []*txTraceResult{
 				{
+					TxHash: txHash,
 					Result: &ethapi.ExecutionResult{
 						Gas:         params.TxGas,
 						Failed:      false,
@@ -560,6 +564,7 @@ func TestTraceBlock(t *testing.T) {
 			expectErr:   nil,
 			expect: []*txTraceResult{
 				{
+					TxHash: txHash,
 					Result: &ethapi.ExecutionResult{
 						Gas:         params.TxGas,
 						Failed:      false,
