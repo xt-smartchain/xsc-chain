@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
+//go:build none
 // +build none
 
 // This file contains a miner stress test based on the Clique consensus engine.
@@ -85,7 +86,12 @@ func main() {
 		enodes = append(enodes, stack.Server().Self())
 
 		// Inject the signer key and start sealing with it
-		store := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+		//store := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+		ks := stack.AccountManager().Backends(keystore.KeyStoreType)
+		if len(ks) == 0 {
+			panic("Keystore is not available")
+		}
+		store := ks[0].(*keystore.KeyStore)
 		signer, err := store.ImportECDSA(sealer, "")
 		if err != nil {
 			panic(err)
