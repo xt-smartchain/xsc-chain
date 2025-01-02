@@ -240,16 +240,17 @@ func DecodeKeyValueMerkleProof(input []byte) (*KeyValueMerkleProof, error) {
 	inputLength := uint64(len(input))
 	pos := uint64(0)
 
-	if inputLength <= storeNameLengthBytesLength+keyLengthBytesLength+valueLengthBytesLength+appHashLength {
-		return nil, fmt.Errorf("input length should be no less than %d", storeNameLengthBytesLength+keyLengthBytesLength+valueLengthBytesLength+appHashLength)
+	fixedSize := storeNameLengthBytesLength + keyLengthBytesLength + valueLengthBytesLength + appHashLength
+	if inputLength <= fixedSize {
+		return nil, fmt.Errorf("input length should be no less than %d", fixedSize)
 	}
 	storeName := string(bytes.Trim(input[pos:pos+storeNameLengthBytesLength], "\x00"))
 	pos += storeNameLengthBytesLength
 
 	keyLength := binary.BigEndian.Uint64(input[pos+keyLengthBytesLength-8 : pos+keyLengthBytesLength])
 	pos += keyLengthBytesLength
-
-	if inputLength <= storeNameLengthBytesLength+keyLengthBytesLength+keyLength+valueLengthBytesLength {
+	fixedSize = storeNameLengthBytesLength + keyLengthBytesLength + valueLengthBytesLength
+	if inputLength <= fixedSize+keyLength || fixedSize+keyLength < fixedSize {
 		return nil, fmt.Errorf("invalid input, keyLength %d is too long", keyLength)
 	}
 	key := input[pos : pos+keyLength]
@@ -257,8 +258,11 @@ func DecodeKeyValueMerkleProof(input []byte) (*KeyValueMerkleProof, error) {
 
 	valueLength := binary.BigEndian.Uint64(input[pos+valueLengthBytesLength-8 : pos+valueLengthBytesLength])
 	pos += valueLengthBytesLength
+	fixedSize = storeNameLengthBytesLength + keyLengthBytesLength + valueLengthBytesLength + appHashLength
+	if inputLength <= fixedSize+keyLength+valueLength ||
+		fixedSize+keyLength < fixedSize ||
+		fixedSize+keyLength+valueLength < valueLength {
 
-	if inputLength <= storeNameLengthBytesLength+keyLengthBytesLength+keyLength+valueLengthBytesLength+valueLength+appHashLength {
 		return nil, fmt.Errorf("invalid input, valueLength %d is too long", valueLength)
 	}
 	value := input[pos : pos+valueLength]
