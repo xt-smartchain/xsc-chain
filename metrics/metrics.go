@@ -61,7 +61,7 @@ func CollectProcessMetrics(refresh time.Duration) {
 	if !Enabled {
 		return
 	}
-	refreshFreq := int64(refresh / time.Second)
+	//refreshFreq := int64(refresh / time.Second)
 
 	// Create the various data collectors
 	cpuStats := make([]*CPUStats, 2)
@@ -93,15 +93,28 @@ func CollectProcessMetrics(refresh time.Duration) {
 		diskWriteBytes        = GetOrRegisterMeter("system/disk/writedata", DefaultRegistry)
 		diskWriteBytesCounter = GetOrRegisterCounter("system/disk/writebytes", DefaultRegistry)
 	)
+	var lastCollectTime time.Time
 	// Iterate loading the different stats and updating the meters
 	for i := 1; ; i++ {
 		location1 := i % 2
 		location2 := (i - 1) % 2
 
 		ReadCPUStats(cpuStats[location1])
-		cpuSysLoad.Update((cpuStats[location1].GlobalTime - cpuStats[location2].GlobalTime) / refreshFreq)
-		cpuSysWait.Update((cpuStats[location1].GlobalWait - cpuStats[location2].GlobalWait) / refreshFreq)
-		cpuProcLoad.Update((cpuStats[location1].LocalTime - cpuStats[location2].LocalTime) / refreshFreq)
+		//cpuSysLoad.Update((cpuStats[location1].GlobalTime - cpuStats[location2].GlobalTime) / refreshFreq)
+		//cpuSysWait.Update((cpuStats[location1].GlobalWait - cpuStats[location2].GlobalWait) / refreshFreq)
+		//cpuProcLoad.Update((cpuStats[location1].LocalTime - cpuStats[location2].LocalTime) / refreshFreq)
+		collectTime := time.Now()
+		secondsSinceLastCollect := collectTime.Sub(lastCollectTime).Seconds()
+		lastCollectTime = collectTime
+		if secondsSinceLastCollect > 0 {
+			sysLoad := (cpuStats[location1].GlobalTime - cpuStats[location2].GlobalTime) / secondsSinceLastCollect
+			sysWait := (cpuStats[location1].GlobalWait - cpuStats[location2].GlobalWait) / secondsSinceLastCollect
+			procLoad := (cpuStats[location1].LocalTime - cpuStats[location2].LocalTime) / secondsSinceLastCollect
+			// Convert to integer percentage.
+			cpuSysLoad.Update(int64(sysLoad * 100))
+			cpuSysWait.Update(int64(sysWait * 100))
+			cpuProcLoad.Update(int64(procLoad * 100))
+		}
 		cpuThreads.Update(int64(threadCreateProfile.Count()))
 		cpuGoroutines.Update(int64(runtime.NumGoroutine()))
 
