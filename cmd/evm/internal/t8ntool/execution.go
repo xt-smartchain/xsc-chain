@@ -199,7 +199,7 @@ func (pre *Prestate) Apply(vmConfig vm.Config, chainConfig *params.ChainConfig,
 	}
 	statedb.IntermediateRoot(chainConfig.IsEIP158(vmContext.BlockNumber))
 	// Add mining reward?
-	if miningReward > 0 {
+	if miningReward >= 0 {
 		// Add mining reward. The mining reward may be `0`, which only makes a difference in the cases
 		// where
 		// - the coinbase suicided, or
