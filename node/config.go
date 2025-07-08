@@ -494,7 +494,7 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 		// For now, we're using EITHER external signer OR local signers.
 		// If/when we implement some form of lockfile for USB and keystore wallets,
 		// we can have both, but it's very confusing for the user to see the same
-		// accounts in both externally and locally, plus very racey.
+		// accounts in both externally and locally, plus very racy.
 		backends = append(backends, keystore.NewKeyStore(keydir, scryptN, scryptP))
 		if conf.USB {
 			// Start a USB hub for Ledger hardware wallets

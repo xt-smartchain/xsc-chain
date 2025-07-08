@@ -60,7 +60,7 @@ type Hub struct {
 
 	quit chan chan error
 
-	stateLock sync.RWMutex // Protects the internals of the hub from racey access
+	stateLock sync.RWMutex // Protects the internals of the hub from racy access
 
 	// TODO(karalabe): remove if hotplug lands on Windows
 	commsPend int           // Number of operations blocking enumeration

@@ -83,7 +83,7 @@ type Hub struct {
 
 	quit chan chan error
 
-	stateLock sync.RWMutex // Protects the internals of the hub from racey access
+	stateLock sync.RWMutex // Protects the internals of the hub from racy access
 }
 
 func (hub *Hub) readPairings() error {
