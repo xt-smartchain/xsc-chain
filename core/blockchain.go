@@ -1710,7 +1710,7 @@ func (bc *BlockChain) InsertChainWithoutSealVerification(block *types.Block) (in
 //
 // This method is split out so that import batches that require re-injecting
 // historical blocks can do so without releasing the lock, which could lead to
-// racey behaviour. If a sidechain import is in progress, and the historic state
+// racy behaviour. If a sidechain import is in progress, and the historic state
 // is imported, but then new canon-head is added before the actual sidechain
 // completes, then the historic state could be pruned again
 func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, error) {
