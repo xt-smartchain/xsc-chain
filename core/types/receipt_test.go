@@ -44,6 +44,10 @@ func TestLegacyReceiptDecoding(t *testing.T) {
 		encode func(*Receipt) ([]byte, error)
 	}{
 		{
+			"ReceiptForStorage",
+			encodeAsReceiptForStorage,
+		},
+		{
 			"StoredReceiptRLP",
 			encodeAsStoredReceiptRLP,
 		},
@@ -352,4 +356,7 @@ func clearComputedFieldsOnLog(t *testing.T, log *Log) {
 	log.TxHash = common.Hash{}
 	log.TxIndex = math.MaxUint32
 	log.Index = math.MaxUint32
+}
+func encodeAsReceiptForStorage(want *Receipt) ([]byte, error) {
+	return rlp.EncodeToBytes((*ReceiptForStorage)(want))
 }
