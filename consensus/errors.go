@@ -34,4 +34,14 @@ var (
 	// ErrInvalidNumber is returned if a block's number doesn't equal its parent's
 	// plus one.
 	ErrInvalidNumber = errors.New("invalid block number")
+
+	// ErrAddressDenied is returned by PoSA.ValidateTx when the sender or the
+	// recipient of a transaction is on the consensus-level address blacklist.
+	//
+	// It is distinct from the errors ValidateTx returns for infrastructure
+	// failures (signer recovery, reading the blacklist from the system
+	// contract): a denied address means "skip this transaction", whereas an
+	// infrastructure failure means the blacklist state is unknown and callers
+	// must not treat individual transactions as denied.
+	ErrAddressDenied = errors.New("address denied")
 )

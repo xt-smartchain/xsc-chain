@@ -1457,11 +1457,11 @@ func (p *Parlia) ValidateTx(tx *types.Transaction, header *types.Header, parentS
 			return err
 		}
 		if d, exist := m[from]; exist && (d != DirectionTo) {
-			return errors.New("address denied")
+			return consensus.ErrAddressDenied
 		}
 		if to := tx.To(); to != nil {
 			if d, exist := m[*to]; exist && (d != DirectionFrom) {
-				return errors.New("address denied")
+				return consensus.ErrAddressDenied
 			}
 		}
 	}

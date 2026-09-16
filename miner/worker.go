@@ -779,6 +779,11 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		w.current.gasPool.SubGas(params.SystemTxsGas)
 	}
 
+	// StateProcessor.Process runs ValidateTx over every transaction when validating
+	// a block, so a transaction packed without that check yields a block the rest
+	// of the network rejects wholesale, costing this validator the slot.
+	posa, isPoSA := w.engine.(consensus.PoSA)
+
 	var coalescedLogs []*types.Log
 	var stopTimer *time.Timer
 	delay := w.engine.Delay(w.chain, w.current.header)
@@ -838,6 +843,27 @@ LOOP:
 			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", w.chainConfig.EIP155Block)
 			txs.Pop()
 			continue
+		}
+		// Ask the consensus engine whether this transaction may be included at all.
+		// Run before Prepare so the state seen here matches the one Process passes
+		// when validating the sealed block.
+		if isPoSA {
+			if err := posa.ValidateTx(tx, w.current.header, w.current.state); err != nil {
+				if errors.Is(err, consensus.ErrAddressDenied) {
+					// Nonce ordering makes the rest of this account's transactions
+					// unusable for this block too, so drop the account like the
+					// gas-limit and nonce-too-high cases below.
+					log.Trace("Skipping transaction denied by consensus", "hash", tx.Hash())
+					txs.Pop()
+					continue
+				}
+				// The blacklist could not be read, so denial cannot be decided for
+				// any transaction. Retrying per sender would re-run the uncached
+				// system contract call for each one, every sealing round; seal what
+				// has been committed so far instead.
+				log.Error("Consensus transaction validation failed, stopping block fill", "hash", tx.Hash(), "err", err)
+				break LOOP
+			}
 		}
 		// Start executing the transaction
 		w.current.state.Prepare(tx.Hash(), common.Hash{}, w.current.tcount)

@@ -17,6 +17,7 @@
 package miner
 
 import (
+	"errors"
 	"math/big"
 	"math/rand"
 	"sync/atomic"
@@ -30,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -127,6 +129,8 @@ func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine 
 			return crypto.Sign(crypto.Keccak256(data), testBankKey)
 		})
 	case *ethash.Ethash:
+	case *mockPoSAEngine:
+		// Wraps ethash; no engine-specific genesis setup required.
 	default:
 		t.Fatalf("unexpected consensus engine type: %T", engine)
 	}
@@ -196,6 +200,184 @@ func newTestWorker(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	w := newWorker(testConfig, chainConfig, engine, backend, new(event.TypeMux), nil, false)
 	w.setEtherbase(testBankAddress)
 	return w, backend
+}
+
+// mockPoSAEngine wraps ethash with the consensus.PoSA interface so that the
+// miner takes the consensus-level transaction validation path. ValidateTx
+// denies the configured addresses, or returns infraErr to simulate the
+// blacklist being unreadable (e.g. the system contract call failing).
+type mockPoSAEngine struct {
+	*ethash.Ethash
+
+	denied   map[common.Address]bool
+	infraErr error
+	calls    int
+}
+
+func (m *mockPoSAEngine) PreHandle(chain consensus.ChainHeaderReader, header *types.Header, statedb *state.StateDB) error {
+	return nil
+}
+
+func (m *mockPoSAEngine) CanCreate(statedb consensus.StateReader, addr common.Address, height *big.Int) bool {
+	return true
+}
+
+func (m *mockPoSAEngine) ValidateTx(tx *types.Transaction, header *types.Header, parentState *state.StateDB) error {
+	m.calls++
+	if m.infraErr != nil {
+		return m.infraErr
+	}
+	from, err := types.Sender(types.LatestSigner(ethashChainConfig), tx)
+	if err != nil {
+		return err
+	}
+	if m.denied[from] {
+		return consensus.ErrAddressDenied
+	}
+	if to := tx.To(); to != nil && m.denied[*to] {
+		return consensus.ErrAddressDenied
+	}
+	return nil
+}
+
+func (m *mockPoSAEngine) IsSystemTransaction(tx *types.Transaction, header *types.Header) (bool, error) {
+	return false, nil
+}
+
+func (m *mockPoSAEngine) IsSystemContract(to *common.Address) bool { return false }
+
+func (m *mockPoSAEngine) EnoughDistance(chain consensus.ChainReader, header *types.Header) bool {
+	return true
+}
+
+func (m *mockPoSAEngine) IsLocalBlock(header *types.Header) bool { return false }
+
+// commitWithPoSA assembles a block with the given engine over the transactions
+// produced by build, and reports which of them made it into the block.
+func commitWithPoSA(t *testing.T, engine *mockPoSAEngine, build func(signer types.Signer) types.Transactions) []*types.Transaction {
+	t.Helper()
+
+	// Deliberately not newTestWorker: that seeds the pool with pendingTxs, and the
+	// resulting NewTxsEvent lets the worker's own mainLoop call commitTransactions
+	// as soon as w.current is set, racing this goroutine over the same environment.
+	backend := newTestWorkerBackend(t, ethashChainConfig, engine, rawdb.NewMemoryDatabase(), 0)
+	w := newWorker(testConfig, ethashChainConfig, engine, backend, new(event.TypeMux), nil, false)
+	w.setEtherbase(testBankAddress)
+	defer w.close()
+
+	parent := w.chain.CurrentBlock()
+	num := parent.Number()
+	header := &types.Header{
+		ParentHash: parent.Hash(),
+		Number:     num.Add(num, common.Big1),
+		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
+		Time:       parent.Time() + 1,
+	}
+	if err := w.engine.Prepare(w.chain, header); err != nil {
+		t.Fatalf("failed to prepare header: %v", err)
+	}
+	if err := w.makeCurrent(parent, header); err != nil {
+		t.Fatalf("failed to create mining context: %v", err)
+	}
+	defer w.current.state.StopPrefetcher()
+
+	byAccount := make(map[common.Address]types.Transactions)
+	for _, tx := range build(w.current.signer) {
+		from, err := types.Sender(w.current.signer, tx)
+		if err != nil {
+			t.Fatalf("failed to recover sender: %v", err)
+		}
+		byAccount[from] = append(byAccount[from], tx)
+	}
+	w.commitTransactions(types.NewTransactionsByPriceAndNonce(w.current.signer, byAccount), testBankAddress, nil)
+
+	return w.current.txs
+}
+
+// TestCommitTransactionsRespectsPoSAValidation checks that the miner consults
+// the consensus engine before packing a transaction. Without it the miner can
+// seal a block containing a blacklisted transaction, which every other node
+// rejects wholesale in StateProcessor.Process, costing the validator the slot.
+func TestCommitTransactionsRespectsPoSAValidation(t *testing.T) {
+	denied := common.HexToAddress("0x000000000000000000000000000000000000dead")
+
+	build := func(signer types.Signer) types.Transactions {
+		return types.Transactions{
+			types.MustSignNewTx(testBankKey, signer, &types.LegacyTx{
+				Nonce: 0, To: &testUserAddress, Value: big.NewInt(1000),
+				Gas: params.TxGas, GasPrice: big.NewInt(1),
+			}),
+			types.MustSignNewTx(testBankKey, signer, &types.LegacyTx{
+				Nonce: 1, To: &denied, Value: big.NewInt(1000),
+				Gas: params.TxGas, GasPrice: big.NewInt(1),
+			}),
+		}
+	}
+
+	// Control case. Without it the assertions below could pass simply because
+	// nothing ever gets committed, making them vacuous.
+	t.Run("empty blacklist commits everything", func(t *testing.T) {
+		engine := &mockPoSAEngine{Ethash: ethash.NewFaker()}
+		committed := commitWithPoSA(t, engine, build)
+		if len(committed) != 2 {
+			t.Fatalf("expected 2 committed transactions, got %d", len(committed))
+		}
+		if engine.calls == 0 {
+			t.Fatal("ValidateTx was never called: the miner is not consulting consensus validation")
+		}
+	})
+
+	t.Run("denied recipient is skipped", func(t *testing.T) {
+		engine := &mockPoSAEngine{
+			Ethash: ethash.NewFaker(),
+			denied: map[common.Address]bool{denied: true},
+		}
+		committed := commitWithPoSA(t, engine, build)
+		for _, tx := range committed {
+			if to := tx.To(); to != nil && *to == denied {
+				t.Fatalf("committed a transaction to blacklisted address %x", denied)
+			}
+		}
+		if len(committed) != 1 {
+			t.Fatalf("expected only the allowed transaction to be committed, got %d", len(committed))
+		}
+	})
+
+	// An unreadable blacklist means "state unknown", not "this transaction is
+	// denied". Treating it per-transaction would re-run the uncached system
+	// contract call for every sender, every sealing round.
+	//
+	// Two distinct senders are required to observe that: TransactionsByPriceAndNonce
+	// holds one heap entry per account, so with a single sender one Pop() empties
+	// the heap and looks exactly like stopping altogether.
+	t.Run("unreadable blacklist fails fast", func(t *testing.T) {
+		buildTwoSenders := func(signer types.Signer) types.Transactions {
+			return types.Transactions{
+				types.MustSignNewTx(testBankKey, signer, &types.LegacyTx{
+					Nonce: 0, To: &testUserAddress, Value: big.NewInt(1000),
+					Gas: params.TxGas, GasPrice: big.NewInt(2),
+				}),
+				types.MustSignNewTx(testUserKey, signer, &types.LegacyTx{
+					Nonce: 0, To: &testBankAddress, Value: big.NewInt(1000),
+					Gas: params.TxGas, GasPrice: big.NewInt(1),
+				}),
+			}
+		}
+
+		engine := &mockPoSAEngine{
+			Ethash:   ethash.NewFaker(),
+			infraErr: errors.New("system contract unavailable"),
+		}
+		committed := commitWithPoSA(t, engine, buildTwoSenders)
+		if len(committed) != 0 {
+			t.Fatalf("expected no committed transactions, got %d", len(committed))
+		}
+		// Dropping only the offending account would go on to validate the second
+		// sender, re-running the uncached system contract call.
+		if engine.calls != 1 {
+			t.Fatalf("expected ValidateTx to be called once (fail fast), got %d", engine.calls)
+		}
+	})
 }
 
 func TestGenerateBlockAndImportEthash(t *testing.T) {
